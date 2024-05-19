@@ -32,14 +32,14 @@ Decrypt::~Decrypt()
 }
 
 QString encp_path = "";
-char hash_entered[128];
+char hash_entered[129];
 
 
 void dcpHashing(QString pass)
 {
     const int h_len = 128;
     string str_hash = sha512(pass.toStdString());
-    for (int i = 0; i <= h_len; i++)
+    for (int i = 0; i < h_len; i++)
     {
         hash_entered[i] = char(str_hash[i]);
     }
@@ -49,7 +49,7 @@ void dcpHashing(QString pass)
 int decryptionXOR(char encp_data[], char dcp_data[], char encp_hash[], uint d_len)
 {
     uint h_len = 128;
-    for (int i = 0; i < d_len ; i++)
+    for (int i = 0; i <= d_len ; i++)
     {
         dcp_data[i] = encp_data[i] ^ encp_hash[i%h_len];
     }

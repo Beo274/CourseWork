@@ -26,7 +26,7 @@ Encrypt::~Encrypt()
 }
 
 QString path = "";
-char char_hash[128];
+char char_hash[129];
 
 mData *CreateList(unsigned length)
 {
@@ -118,7 +118,8 @@ void hashing(QString pass)
 {
     const int h_len = 128;
     string str_hash = sha512(pass.toStdString());
-    for (int i = 0; i <= h_len;i++)
+    qDebug() << str_hash.length();
+    for (int i = 0; i < h_len;i++)
     {
         char_hash[i] = char(str_hash[i]);
     }
@@ -128,8 +129,8 @@ void hashing(QString pass)
 mData *encryptionXOR(char data[],char hashed_password[], int len)
 {
     int h_len = 128;
-    mData *encp_data = CreateList(len);
-    for (uint i = 0; i < len; i++)
+    mData *encp_data = CreateList(len+1);
+    for (uint i = 0; i <= len; i++)
     {
         getItem(encp_data, i)->a = data[i] ^ hashed_password[i % h_len];
     }
@@ -151,7 +152,7 @@ void Encrypt::on_pushButton_2_clicked()
     //Обнуление переменных
     ui->error->setText("");
     const char *nothing = {""};
-    for (unsigned i = 0; i < 128; i++)
+    for (unsigned i = 0; i <= 128; i++)
         char_hash[i] = nothing[0];
 
 
@@ -176,10 +177,10 @@ void Encrypt::on_pushButton_2_clicked()
 
             char *data;
 
-            data = file.read(len).data();
-            qDebug() << data << "изначальные данные\n";
+            data = file.readAll().data();
+            qDebug() << "начало\n" << data << "изначальные данные";
             mData *encp_data = encryptionXOR(data,char_hash,len);
-            char encp_arr[len];
+            char encp_arr[len+1];
             listToArr(encp_data,encp_arr);
             QDebug debug = qDebug();
 
