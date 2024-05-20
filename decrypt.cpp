@@ -46,14 +46,13 @@ void dcpHashing(QString pass)
 }
 
 
-int decryptionXOR(char encp_data[], char dcp_data[], char encp_hash[], uint d_len)
+QByteArray decryptionXOR(QByteArray encp_data, QByteArray encp_hash)
 {
     uint h_len = 128;
-    for (int i = 0; i <= d_len ; i++)
-    {
-        dcp_data[i] = encp_data[i] ^ encp_hash[i%h_len];
-    }
-    return 1;
+    QByteArray dcp_data;
+    for (int i = 0; i < encp_data.size(); i++)
+        dcp_data += (encp_data[i] ^ encp_hash[i % h_len]);
+    return dcp_data;
 }
 
 
@@ -97,15 +96,15 @@ void Decrypt::on_pushButton_2_clicked()
             uint d_len = encp_file.size() - h_len;
 
             // запись хэша и данных из файла
-            char *encp_hash = encp_file.read(h_len).data();
-            char *encp_data = encp_file.read(d_len).data();
+            QByteArray encp_hash = encp_file.read(h_len);
+            QByteArray encp_data = encp_file.read(d_len);
 
             // хэширование введенного пароля и проверка на совпадение
             dcpHashing(ui->pass->text());
             bool isEqual = 1;
             for (uint i = 0; i < h_len; i++)
             {
-                if (encp_hash[i] != hash_entered[i])
+                if (encp_hash.data()[i] != hash_entered[i])
                 {
                     isEqual = 0;
                     break;
@@ -118,9 +117,9 @@ void Decrypt::on_pushButton_2_clicked()
             else
             {
                 ui->error->setText("");
+
                 // дешифровка
-                char dcp_data[d_len];
-                decryptionXOR(encp_data,dcp_data,encp_hash,d_len);
+                QByteArray dcp_data = decryptionXOR(encp_data,encp_hash);
 
                 //запись в файл
                 QFile dcp_file(editPath(encp_path));

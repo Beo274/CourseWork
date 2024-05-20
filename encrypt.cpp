@@ -8,7 +8,7 @@
 #include <QString>
 #include <QDebug>
 
-
+// СДЕЛАТЬ ВСЕ ЧЕРЕЗ QByreArray
 struct mData;
 using namespace std;
 
@@ -92,50 +92,53 @@ unsigned getLength(mData *beg)
 }
 
 
-void listToArr(mData *list, char *arr)
-{
-    uint len = getLength(list);
-    for (uint i = 0; i < len; i++)
-    {
-        arr[i] = getItem(list,i)->a;
-    }
-}
+// void listToArr(mData *list, char *arr)
+// {
+//     uint len = getLength(list);
+//     for (uint i = 0; i < len; i++)
+//     {
+//         arr[i] = getItem(list,i)->a;
+//     }
+// }
 
 
-void arrToList(mData *list, char *arr)
-{
-    uint len = getLength(list);
-    mData *curr = list;
-    for (int i = 0; i < len; i++)
-    {
-        curr->a = arr[i];
-        curr = curr->adr;
-    }
-}
+// void arrToList(mData *list, char *arr)
+// {
+//     uint len = getLength(list);
+//     mData *curr = list;
+//     for (int i = 0; i < len; i++)
+//     {
+//         curr->a = arr[i];
+//         curr = curr->adr;
+//     }
+// }
 
 
-void hashing(QString pass)
+QByteArray hashing(QString pass)
 {
     const int h_len = 128;
-    string str_hash = sha512(pass.toStdString());
-    qDebug() << str_hash.length();
-    for (int i = 0; i < h_len;i++)
-    {
-        char_hash[i] = char(str_hash[i]);
-    }
+    QString str_hash = QString::fromStdString(sha512(pass.toStdString()));
+    QByteArray password = str_hash.toLocal8Bit();
+    // for (int i = 0; i < h_len;i++)
+    // {
+    //     char_hash[i] = char(str_hash[i]);
+    // }
+    return password;
 }
 
 
-mData *encryptionXOR(char data[],char hashed_password[], int len)
+mData *encryptionXOR(QByteArray data, QByteArray pass)
 {
     int h_len = 128;
-    mData *encp_data = CreateList(len+1);
-    for (uint i = 0; i <= len; i++)
+    mData *encp_data = CreateList(data.size());
+    //qDebug() << (typeid(pass[0 % h_len]) == typeid(char));
+
+    for (int i = 0; i < data.size(); i++)
     {
-        getItem(encp_data, i)->a = data[i] ^ hashed_password[i % h_len];
+        //qDebug() << i;
+        getItem(encp_data, i)->a = data[i] ^ pass[i % h_len];
     }
     return encp_data;
-
 }
 
 
@@ -150,11 +153,11 @@ void Encrypt::on_pushButton_clicked()
 void Encrypt::on_pushButton_2_clicked()
 {
     //Обнуление переменных
+    QDebug debug = qDebug();
     ui->error->setText("");
     const char *nothing = {""};
     for (unsigned i = 0; i <= 128; i++)
         char_hash[i] = nothing[0];
-
 
     if (ui->path_line->text() == "" || ui->pass_line->text() == "")
     {
@@ -173,16 +176,14 @@ void Encrypt::on_pushButton_2_clicked()
         }
         else
         {
-            hashing(ui->pass_line->text());
+            QByteArray pass = hashing(ui->pass_line->text());
 
-            char *data;
+            QByteArray data = file.readAll();
+            mData *encp_data = encryptionXOR(data,pass);
+            QByteArray encp_arr;
 
-            data = file.readAll().data();
-            qDebug() << "начало\n" << data << "изначальные данные";
-            mData *encp_data = encryptionXOR(data,char_hash,len);
-            char encp_arr[len+1];
-            listToArr(encp_data,encp_arr);
-            QDebug debug = qDebug();
+            for (uint i = 0; i < len; i++)
+                encp_arr += getItem(encp_data, i)->a;
 
             QFile encp_file(path+".encp");
             if (!encp_file.open(QIODevice::WriteOnly))
@@ -192,38 +193,52 @@ void Encrypt::on_pushButton_2_clicked()
                 ui->error->setText("");
 
                 // запись хэша
-                encp_file.write(char_hash);
-                //qDebug() << char_hash << "хэш";
+                encp_file.write(pass);
 
                 // запись основных данных
                 encp_file.write(encp_arr);
-                qDebug() << encp_arr << "данные\n";
 
                 ui->error->setText("Файл сохранен в ту же папку");
             }
             DeleteList(encp_data);
             encp_file.close();
 
-            //тестирование
-            QFile test(path+".encp");
-            test.open(QIODevice::ReadOnly);
-            uint a = 128;
-            char *th = test.read(a).data();
-            char *td = test.read(len).data();
-            char res1[len];
-            for (uint i = 0; i < len; i++)
-            {
-                res1[i] = td[i]^th[i%h_len];
+            // //тестирование
+            // // QFile test(path+".encp");
+            // // test.open(QIODevice::ReadOnly);
+            // // uint a = 128;
+            // // QByteArray th = ui->pass_line->text().toLocal8Bit();
+            // // QByteArray td = test.read(test.size()-a);
+            // // QByteArray res1;
+            // // qDebug() << td.size() << "после записи";
+            // // for (int i = 0; i <= td.size()-1; i++)
+            // // {
+            // //     res1[i] = td[i]^th[i%h_len];
+            // // }
+            // // qDebug() << "3";
+            // // QFile test2(path+".txt");
+            // // test2.open(QIODevice::WriteOnly);
+            // // test2.write(res1);
+            // // test2.close();
+            // //test.close();
+
+            // QFile f(path+".encp");
+            // f.open(QIODevice::ReadOnly);
+            // qDebug() << f.size() << "весь файл";
+            // QByteArray fp = f.read(128);
+            // QByteArray buf = f.read(f.size()-128);;
+            // qDebug() << buf.size() << "после записи";
+            // //QByteArray pass = ui->pass_line->text().toLocal8Bit();
+            // for (int i = 0; i < buf.size(); i++)
+            // {
+            //     buf[i] = buf[i] ^ fp[i%128];
+            // }
+            // QFile f2(path+"1");
+            // f2.open(QIODevice::WriteOnly);
+            // f2.write(buf);
+            // f.close();
+            // f2.close();
             }
-            //qDebug() << th << "Хэш из файла";
-            qDebug() << td << "данные из файла";
-            qDebug() << res1 << "результат";
-            QFile test2(path+".txt");
-            test2.open(QIODevice::WriteOnly);
-            test2.write(res1);
-            test2.close();
-            test.close();
-        }
     file.close();
 
     }
