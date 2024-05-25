@@ -37,14 +37,11 @@ QString encp_path = "";
 char hash_entered[129];
 
 
-void dcpHashing(QString pass)
+QByteArray dcpHashing(QString pass)
 {
-    const int h_len = 128;
-    string str_hash = sha512(pass.toStdString());
-    for (int i = 0; i < h_len; i++)
-    {
-        hash_entered[i] = char(str_hash[i]);
-    }
+    QString str_hash = QString::fromStdString(sha512(pass.toStdString()));
+    QByteArray password = str_hash.toLocal8Bit();
+    return password;
 }
 
 
@@ -113,11 +110,12 @@ void Decrypt::on_pushButton_2_clicked()
             QByteArray encp_data = encp_file.read(d_len);
 
             // хэширование введенного пароля и проверка на совпадение
-            dcpHashing(ui->pass->text());
+            QByteArray pass = dcpHashing(ui->pass->text());
+            qDebug() << ui->pass->text();
             bool isEqual = 1;
             for (uint i = 0; i < h_len; i++)
             {
-                if (encp_hash.data()[i] != hash_entered[i])
+                if (encp_hash[i] != pass[i])
                 {
                     isEqual = 0;
                     break;

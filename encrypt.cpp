@@ -176,7 +176,7 @@ void Encrypt::on_pushButton_2_clicked()
             bar->show();
 
             QByteArray pass = hashing(ui->pass_line->text());
-
+            qDebug() << ui->pass_line->text();
             QByteArray data = file.readAll();
             mData *encp_data = encryptionXOR(data,pass,bar);
             QByteArray encp_arr;
