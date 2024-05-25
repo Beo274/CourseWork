@@ -8,6 +8,8 @@
 #include <QDebug>
 #include <QDataStream>
 #include "mainwindow.h"
+#include <QProgressBar>
+#include <QThread>
 struct mData;
 mData *CreateList(unsigned length);
 void DeleteList(mData *&beg);
@@ -46,12 +48,22 @@ void dcpHashing(QString pass)
 }
 
 
-QByteArray decryptionXOR(QByteArray encp_data, QByteArray encp_hash)
+QByteArray decryptionXOR(QByteArray encp_data, QByteArray encp_hash, QProgressBar *bar)
 {
+    int div = encp_data.size()/100;
+    int val = 0;
     uint h_len = 128;
     QByteArray dcp_data;
     for (int i = 0; i < encp_data.size(); i++)
+    {
         dcp_data += (encp_data[i] ^ encp_hash[i % h_len]);
+        if (i % div == 0)
+        {
+            QThread::msleep(1);
+            bar->setValue(++val);
+        }
+
+    }
     return dcp_data;
 }
 
@@ -92,6 +104,7 @@ void Decrypt::on_pushButton_2_clicked()
         }
         else
         {
+            // инициализация длин
             uint h_len = 128;
             uint d_len = encp_file.size() - h_len;
 
@@ -118,8 +131,14 @@ void Decrypt::on_pushButton_2_clicked()
             {
                 ui->error->setText("");
 
+                // создание ProgressBar
+                QProgressBar *bar = new QProgressBar(this);
+                bar->setValue(0);
+                ui->gridLayout->addWidget(bar,10,0,1,2);
+                bar->show();
+
                 // дешифровка
-                QByteArray dcp_data = decryptionXOR(encp_data,encp_hash);
+                QByteArray dcp_data = decryptionXOR(encp_data,encp_hash, bar);
 
                 //запись в файл
                 QFile dcp_file(editPath(encp_path));
@@ -133,6 +152,7 @@ void Decrypt::on_pushButton_2_clicked()
                     ui->error->setText("Файл сохранен в ту же папку");
                 }
                 dcp_file.close();
+                delete bar;
             }
         }
         encp_file.close();

@@ -7,19 +7,39 @@
     <x>0</x>
     <y>0</y>
     <width>374</width>
-    <height>301</height>
+    <height>300</height>
    </rect>
   </property>
   <property name="font">
    <font>
     <family>Bahnschrift SemiLight SemiConde</family>
-    <pointsize>16</pointsize>
+    <pointsize>15</pointsize>
+    <italic>false</italic>
+    <bold>false</bold>
    </font>
   </property>
   <property name="windowTitle">
    <string>MainWindow</string>
   </property>
+  <property name="styleSheet">
+   <string notr="true">QPushButton {
+	font: 350 16pt &quot;Bahnschrift SemiLight SemiConde&quot;;
+}
+ QLabel {
+	font: 350 16pt &quot;Bahnschrift SemiLight SemiConde&quot;;
+}
+
+QPushButton::hover {
+	background-color:rgb(188, 188, 188);
+	border-radius:10px;
+}
+
+</string>
+  </property>
   <widget class="QWidget" name="centralwidget">
+   <property name="styleSheet">
+    <string notr="true"/>
+   </property>
    <layout class="QVBoxLayout" name="verticalLayout">
     <item>
      <layout class="QGridLayout" name="gridLayout">
@@ -44,6 +64,10 @@
       </item>
       <item row="1" column="0">
        <widget class="QPushButton" name="pushButton">
+        <property name="styleSheet">
+         <string notr="true">
+</string>
+        </property>
         <property name="text">
          <string>Шифрование файла</string>
         </property>
@@ -51,13 +75,19 @@
       </item>
       <item row="2" column="0">
        <widget class="QPushButton" name="decrypt_button">
+        <property name="styleSheet">
+         <string notr="true"/>
+        </property>
         <property name="text">
          <string>Дешифрование файла</string>
         </property>
        </widget>
       </item>
       <item row="3" column="0">
-       <widget class="QPushButton" name="pushButton_3">
+       <widget class="QPushButton" name="help_button">
+        <property name="styleSheet">
+         <string notr="true"/>
+        </property>
         <property name="text">
          <string>Помощь</string>
         </property>
@@ -67,17 +97,18 @@
     </item>
    </layout>
   </widget>
-  <widget class="QMenuBar" name="menubar">
-   <property name="geometry">
-    <rect>
-     <x>0</x>
-     <y>0</y>
-     <width>374</width>
-     <height>27</height>
-    </rect>
-   </property>
-  </widget>
   <widget class="QStatusBar" name="statusbar"/>
+  <widget class="QToolBar" name="toolBar">
+   <property name="windowTitle">
+    <string>toolBar</string>
+   </property>
+   <attribute name="toolBarArea">
+    <enum>TopToolBarArea</enum>
+   </attribute>
+   <attribute name="toolBarBreak">
+    <bool>false</bool>
+   </attribute>
+  </widget>
  </widget>
  <resources/>
  <connections/>

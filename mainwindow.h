@@ -34,6 +34,8 @@ private slots:
 
     void on_decrypt_button_clicked();
 
+    void on_help_button_clicked();
+
 private:
     Ui::MainWindow *ui;
     Encrypt *encrypt;

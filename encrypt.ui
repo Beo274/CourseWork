@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>400</width>
-    <height>210</height>
+    <height>211</height>
    </rect>
   </property>
   <property name="font">
@@ -18,6 +18,19 @@
   </property>
   <property name="windowTitle">
    <string>Dialog</string>
+  </property>
+  <property name="styleSheet">
+   <string notr="true">QPushButton {
+	font: 350 16pt &quot;Bahnschrift SemiLight SemiConde&quot;;
+}
+ QLabel {
+	font: 350 16pt &quot;Bahnschrift SemiLight SemiConde&quot;;
+}
+
+QPushButton::hover {
+	background-color:rgb(188, 188, 188);
+	border-radius:10px;
+}</string>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
