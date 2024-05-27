@@ -1,4 +1,4 @@
-#include "mainwindow.h"
+ #include "mainwindow.h"
 #include "ui_mainwindow.h"
 #include <QMessageBox>
 
@@ -9,6 +9,7 @@ MainWindow::MainWindow(QWidget *parent)
     ui->setupUi(this);
     encrypt = new Encrypt(this);
     decrypt = new Decrypt(this);
+    setWindowTitle("Главная страница");
 }
 
 MainWindow::~MainWindow()

@@ -17,6 +17,7 @@ mData *getItem(mData *beg, unsigned index);
 mData *addItem(mData *beg, unsigned index);
 unsigned getLength(mData *beg);
 void arrToList(mData *beg, char *arr);
+int f(int l, int n);
 
 using namespace std;
 
@@ -26,6 +27,7 @@ Decrypt::Decrypt(QWidget *parent)
     , ui(new Ui::Decrypt)
 {
     ui->setupUi(this);
+    setWindowTitle("Дешифрование");
 }
 
 Decrypt::~Decrypt()
@@ -36,6 +38,84 @@ Decrypt::~Decrypt()
 QString encp_path = "";
 char hash_entered[129];
 
+QByteArray unpadding(QByteArray data)
+{
+    for (int i = data.size()-1; i >= 0; i--)
+    {
+        if (data[i] == '1')
+        {
+            data.removeAt(i);
+            return data;
+        }
+        data.removeAt(i);
+    }
+}
+
+QByteArray decryptionFestl(QByteArray encp_data, QProgressBar *bar)
+{
+
+    int div;
+    int val = 0;
+    int k = 1;
+
+    if (encp_data.size() < 100)
+    {
+        div = 100/encp_data.size();
+        k = div;
+    }
+    else
+        div = encp_data.size()/100;
+
+    QByteArray dcp_data;
+    int n = 3;
+    QByteArray R;
+    QByteArray L;
+
+    for (uint i = 0; i < encp_data.size(); i++)
+    {
+        if (i < encp_data.size()/2)
+            L+=encp_data[i];
+        else
+            R+=encp_data[i];
+    }
+
+    for (int i = 0; i < encp_data.size()/2; i++)
+    {
+        for (int j = n; j > 1; j--)
+        {
+            int temp = L[i];
+            L[i] = R[i]^f(L[i],j);
+            R[i] = temp;
+        }
+        R[i]^=f(L[i],1);
+
+        if (encp_data.size() >= 100)
+        {
+            if (i % div == 0 )
+            {
+                QThread::msleep(1);
+                val+=(2*k);
+                bar->setValue(val);
+            }
+        }
+        else
+        {
+            QThread::msleep(1);
+            val+=2*k;
+            bar->setValue(val);
+        }
+    }
+
+    for (int i = 0; i < encp_data.size(); i++)
+    {
+        if (i < encp_data.size()/2)
+            dcp_data += L[i];
+        else
+            dcp_data += R[i%(encp_data.size()/2)];
+    }
+    dcp_data = unpadding(dcp_data);
+    return dcp_data;
+}
 
 QByteArray dcpHashing(QString pass)
 {
@@ -47,19 +127,38 @@ QByteArray dcpHashing(QString pass)
 
 QByteArray decryptionXOR(QByteArray encp_data, QByteArray encp_hash, QProgressBar *bar)
 {
-    int div = encp_data.size()/100;
+    int div;
     int val = 0;
+    int k = 1;
+
+    if (encp_data.size() < 100)
+    {
+        div = 100/encp_data.size();
+        k = div;
+    }
+    else
+        div = encp_data.size()/100;
+
     uint h_len = 128;
     QByteArray dcp_data;
     for (int i = 0; i < encp_data.size(); i++)
     {
         dcp_data += (encp_data[i] ^ encp_hash[i % h_len]);
-        if (i % div == 0)
+        if (encp_data.size() >= 100)
+        {
+            if (i % div == 0 )
+            {
+                QThread::msleep(1);
+                val+=k;
+                bar->setValue(val);
+            }
+        }
+        else
         {
             QThread::msleep(1);
-            bar->setValue(++val);
+            val+=k;
+            bar->setValue(val);
         }
-
     }
     return dcp_data;
 }
@@ -85,7 +184,11 @@ void Decrypt::on_pushButton_clicked()
 
 void Decrypt::on_pushButton_2_clicked()
 {
-    if (ui->pass->text() == "" || ui->path->text() == "")
+    if ((ui->path->text() == "" || ui->pass->text() == "") && ui->comboBox->currentIndex() == 0)
+    {
+        ui->error->setText("Введены не все данные");
+    }
+    else if (ui->path->text() == "" && ui->comboBox->currentIndex() == 2)
     {
         ui->error->setText("Введены не все данные");
     }
@@ -101,42 +204,62 @@ void Decrypt::on_pushButton_2_clicked()
         }
         else
         {
-            // инициализация длин
-            uint h_len = 128;
-            uint d_len = encp_file.size() - h_len;
+            // создание ProgressBar
+            QProgressBar *bar = new QProgressBar(this);
+            bar->setValue(0);
+            ui->gridLayout->addWidget(bar,10,0,1,2);
+            bar->show();
 
-            // запись хэша и данных из файла
-            QByteArray encp_hash = encp_file.read(h_len);
-            QByteArray encp_data = encp_file.read(d_len);
-
-            // хэширование введенного пароля и проверка на совпадение
-            QByteArray pass = dcpHashing(ui->pass->text());
-            qDebug() << ui->pass->text();
-            bool isEqual = 1;
-            for (uint i = 0; i < h_len; i++)
+            if (encp_file.size() == 0)
             {
-                if (encp_hash[i] != pass[i])
-                {
-                    isEqual = 0;
-                    break;
-                }
-            }
-            if (!isEqual)
-            {
-                ui->error->setText("Неверный пароль");
+                QFile dcp_file(editPath(encp_path));
+                dcp_file.open(QIODevice::WriteOnly);
+                dcp_file.close();
+                encp_file.close();
+                bar->setValue(100);
+                ui->error->setText("Файл сохранен в ту же папку");
             }
             else
             {
-                ui->error->setText("");
+                // инициализация длин
+                uint h_len = 128;
+                uint d_len = encp_file.size() - h_len;
 
-                // создание ProgressBar
-                QProgressBar *bar = new QProgressBar(this);
-                bar->setValue(0);
-                ui->gridLayout->addWidget(bar,10,0,1,2);
-                bar->show();
+                // инициализация расшифрованных массивов байт
+                QByteArray dcp_data;
 
-                // дешифровка
-                QByteArray dcp_data = decryptionXOR(encp_data,encp_hash, bar);
+                // хэширование введенного пароля и проверка на совпадение
+                if (ui->comboBox->currentIndex() == 0)
+                {
+                    // запись хэша и данных из файла
+                    QByteArray encp_hash = encp_file.read(h_len);
+                    QByteArray encp_data = encp_file.read(d_len);
+
+                    QByteArray pass = dcpHashing(ui->pass->text());
+                    bool isEqual = 1;
+                    for (uint i = 0; i < h_len; i++)
+                    {
+                        if (encp_hash[i] != pass[i])
+                        {
+                            isEqual = 0;
+                            break;
+                        }
+                    }
+                    if (!isEqual)
+                    {
+                        ui->error->setText("Неверный пароль");
+                    }
+                    else
+                    {
+                        // дешифровка
+                        dcp_data = decryptionXOR(encp_data,encp_hash, bar);
+                    }
+                }
+                else if (ui->comboBox->currentIndex() == 1)
+                {
+                    QByteArray encp_data = encp_file.readAll();
+                    dcp_data = decryptionFestl(encp_data,bar);
+                }
 
                 //запись в файл
                 QFile dcp_file(editPath(encp_path));
@@ -150,11 +273,24 @@ void Decrypt::on_pushButton_2_clicked()
                     ui->error->setText("Файл сохранен в ту же папку");
                 }
                 dcp_file.close();
-                delete bar;
             }
+            delete bar;
         }
         encp_file.close();
     }
 }
 
+
+
+void Decrypt::on_comboBox_currentIndexChanged(int index)
+{
+    if (ui->comboBox->currentIndex() == 1)
+    {
+        ui->pass->setDisabled(true);
+    }
+    else
+    {
+        ui->pass->setDisabled(false);
+    }
+}
 

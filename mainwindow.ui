@@ -65,8 +65,7 @@ QPushButton::hover {
       <item row="1" column="0">
        <widget class="QPushButton" name="pushButton">
         <property name="styleSheet">
-         <string notr="true">
-</string>
+         <string notr="true"/>
         </property>
         <property name="text">
          <string>Шифрование файла</string>

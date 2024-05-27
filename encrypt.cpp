@@ -18,6 +18,7 @@ Encrypt::Encrypt(QWidget *parent)
     , ui(new Ui::Encrypt)
 {
     ui->setupUi(this);
+    setWindowTitle("Шифрование");
 }
 
 
@@ -92,22 +93,91 @@ unsigned getLength(mData *beg)
     return length;
 }
 
-// int divs(int size)
-// {
-//     int max = 2;
-//     for (int div = 1; div < int(std::pow(size,0.5))+1; div++)
-//     {
-//         if (size % div == 0 && div != 1)
-//         {
-//             if (div*100/size != 0)
-//             {
-//                 return div*100/size;
-//             }
-//             continue;
-//         }
-//     }
-//     return 1;
-// }
+
+
+int f(int l, int n)
+{
+    return (l+n)%256;
+}
+
+
+QByteArray padding(QByteArray data)
+{
+    data += "1";
+    int k = 2 - (data.size() % 2);
+    for (int i = 0; i < k; i++)
+    {
+        data += "0";
+    }
+    return data;
+}
+
+
+mData *encryptionFestl(QByteArray data, QProgressBar *bar)
+{
+    data = padding(data);
+    int div;
+    int val = 0;
+    int k = 1;
+
+    if (data.size() < 100)
+    {
+        div = 100/data.size();
+        k = div;
+    }
+    else
+        div = data.size()/100;
+
+    mData *encp_data = CreateList(data.size());
+    int n = 3;
+    QByteArray R;
+    QByteArray L;
+
+    for (int i = 0; i < data.size(); i++)
+    {
+        if (i < data.size()/2)
+            L+=data[i];
+        else
+            R+=data[i];
+    }
+
+    for (int i = 0; i < data.size()/2; i++)
+    {
+        for (int j = 1; j < n; j++)
+        {
+            int temp = L[i];
+            L[i] = R[i]^f(L[i],j);
+            R[i] = temp;
+        }
+        R[i]^=f(L[i],n);
+
+        if (data.size() >= 100)
+        {
+            if (i % div == 0 )
+            {
+                QThread::msleep(1);
+                val+=(2*k);
+                bar->setValue(val);
+            }
+        }
+        else
+        {
+            QThread::msleep(1);
+            val+=2*k;
+            bar->setValue(val);
+        }
+    }
+
+    for (int i = 0; i < data.size(); i++)
+    {
+        if (i < data.size()/2)
+            getItem(encp_data, i)->a = L[i];
+        else
+            getItem(encp_data, i)->a = R[i%(data.size()/2)];
+    }
+    return encp_data;
+}
+
 
 QByteArray hashing(QString pass)
 {
@@ -120,16 +190,38 @@ QByteArray hashing(QString pass)
 mData *encryptionXOR(QByteArray data, QByteArray pass, QProgressBar *bar)
 {
     int h_len = 128;
-    int div = data.size()/100;
-    int val=0;
+    int div;
+    int val = 0;
+    int k = 1;
+
+    if (data.size() < 100)
+    {
+        div = 100/data.size();
+        k = div;
+    }
+    else
+        div = data.size()/100;
+
+
     mData *encp_data = CreateList(data.size());
+
     for (int i = 0; i < data.size(); i++)
     {
         getItem(encp_data, i)->a = data[i] ^ pass[i % h_len];
-        if (i % div == 0 )
+        if (data.size() >= 100)
+        {
+            if (i % div == 0 )
+            {
+                QThread::msleep(1);
+                val+=k;
+                bar->setValue(val);
+            }
+        }
+        else
         {
             QThread::msleep(1);
-            bar->setValue(++val);
+            val+=k;
+            bar->setValue(val);
         }
 
     }
@@ -153,7 +245,11 @@ void Encrypt::on_pushButton_2_clicked()
     for (unsigned i = 0; i <= 128; i++)
         char_hash[i] = nothing[0];
 
-    if (ui->path_line->text() == "" || ui->pass_line->text() == "")
+    if ((ui->path_line->text() == "" || ui->pass_line->text() == "") && ui->comboBox->currentIndex() == 0)
+    {
+        ui->error->setText("Введены не все данные");
+    }
+    else if (ui->path_line->text() == "" && ui->comboBox->currentIndex() == 2)
     {
         ui->error->setText("Введены не все данные");
     }
@@ -162,7 +258,6 @@ void Encrypt::on_pushButton_2_clicked()
         ui->error->setText("");
 
         QFile file(path);
-        uint len = file.size();
 
         if (!file.open(QIODevice::ReadOnly))
         {
@@ -170,37 +265,58 @@ void Encrypt::on_pushButton_2_clicked()
         }
         else
         {
+            // создание Progress Bar
             QProgressBar *bar = new QProgressBar(this);
             bar->setValue(0);
             ui->gridLayout->addWidget(bar,10,0,1,0);
             bar->show();
 
-            QByteArray pass = hashing(ui->pass_line->text());
-            qDebug() << ui->pass_line->text();
-            QByteArray data = file.readAll();
-            mData *encp_data = encryptionXOR(data,pass,bar);
-            QByteArray encp_arr;
-
-            for (uint i = 0; i < len; i++)
-                encp_arr += getItem(encp_data, i)->a;
-
-            QFile encp_file(path+".encp");
-            if (!encp_file.open(QIODevice::WriteOnly))
-                ui->error->setText("Ошибка при создании файла");
-            else
+            if (file.size() == 0)
             {
-                ui->error->setText("");
-
-                // запись хэша
-                encp_file.write(pass);
-
-                // запись основных данных
-                encp_file.write(encp_arr);
-
+                qDebug() << "1";
+                QFile encp_file(path+".encp");
+                encp_file.open(QIODevice::WriteOnly);
+                encp_file.close();
+                file.close();
+                bar->setValue(100);
                 ui->error->setText("Файл сохранен в ту же папку");
             }
-            DeleteList(encp_data);
-            encp_file.close();
+            else
+            {
+                // чтение пароля и данных из файла
+                QByteArray pass = hashing(ui->pass_line->text());
+                QByteArray data = file.readAll();
+
+                // выбор метода шифрования
+                // 0 - XOR, 1 - Фейстель
+                mData *encp_data;
+
+                if (ui->comboBox->currentIndex() == 0)
+                    encp_data = encryptionXOR(data,pass,bar);
+                else if (ui->comboBox->currentIndex() == 1)
+                    encp_data = encryptionFestl(data,bar);
+
+                QByteArray encp_arr;
+
+                for (uint i = 0; i < getLength(encp_data); i++)
+                    encp_arr += getItem(encp_data, i)->a;
+
+                QFile encp_file(path+".encp");
+                if (!encp_file.open(QIODevice::WriteOnly))
+                    ui->error->setText("Ошибка при создании файла");
+                else
+                {
+                    // запись хэша
+                    if (ui->comboBox->currentIndex() == 0)
+                        encp_file.write(pass);
+
+                    // запись основных данных
+                    encp_file.write(encp_arr);
+                    ui->error->setText("Файл сохранен в ту же папку");
+                }
+                DeleteList(encp_data);
+                encp_file.close();
+            }
             delete bar;
         }
     file.close();
@@ -209,3 +325,12 @@ void Encrypt::on_pushButton_2_clicked()
 
     }
 }
+
+void Encrypt::on_comboBox_currentIndexChanged(int index)
+{
+    if (ui->comboBox->currentIndex() == 1)
+        ui->pass_line->setDisabled(true);
+    else
+        ui->pass_line->setDisabled(false);
+}
+
