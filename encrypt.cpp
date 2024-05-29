@@ -94,7 +94,6 @@ unsigned getLength(mData *beg)
 }
 
 
-
 int f(int l, int n)
 {
     return (l+n)%256;
@@ -113,11 +112,12 @@ QByteArray padding(QByteArray data)
 }
 
 
-mData *encryptionFestl(QByteArray data, QProgressBar *bar)
+QByteArray encryptionFestl(QByteArray data, QProgressBar *bar)
 {
     data = padding(data);
     int div;
-    int val = 0;
+    mData *val = CreateList(1);
+    val->a = 0;
     int k = 1;
 
     if (data.size() < 100)
@@ -128,7 +128,7 @@ mData *encryptionFestl(QByteArray data, QProgressBar *bar)
     else
         div = data.size()/100;
 
-    mData *encp_data = CreateList(data.size());
+    QByteArray encp_data;
     int n = 3;
     QByteArray R;
     QByteArray L;
@@ -155,26 +155,19 @@ mData *encryptionFestl(QByteArray data, QProgressBar *bar)
         {
             if (i % div == 0 )
             {
-                QThread::msleep(1);
-                val+=(2*k);
-                bar->setValue(val);
+                val->a += (2*k);
+                bar->setValue(val->a);
             }
         }
         else
         {
-            QThread::msleep(1);
-            val+=2*k;
-            bar->setValue(val);
+            val->a += 2*k;
+            bar->setValue(val->a);
         }
+
     }
 
-    for (int i = 0; i < data.size(); i++)
-    {
-        if (i < data.size()/2)
-            getItem(encp_data, i)->a = L[i];
-        else
-            getItem(encp_data, i)->a = R[i%(data.size()/2)];
-    }
+    encp_data = L + R;
     return encp_data;
 }
 
@@ -187,11 +180,12 @@ QByteArray hashing(QString pass)
 }
 
 
-mData *encryptionXOR(QByteArray data, QByteArray pass, QProgressBar *bar)
+QByteArray encryptionXOR(QByteArray data, QByteArray pass, QProgressBar *bar)
 {
     int h_len = 128;
     int div;
-    int val = 0;
+    mData *val = CreateList(1);
+    val->a = 0;
     int k = 1;
 
     if (data.size() < 100)
@@ -201,29 +195,24 @@ mData *encryptionXOR(QByteArray data, QByteArray pass, QProgressBar *bar)
     }
     else
         div = data.size()/100;
-
-
-    mData *encp_data = CreateList(data.size());
+    QByteArray encp_data;
 
     for (int i = 0; i < data.size(); i++)
     {
-        getItem(encp_data, i)->a = data[i] ^ pass[i % h_len];
+         encp_data += data[i] ^ pass[i % h_len];
         if (data.size() >= 100)
         {
             if (i % div == 0 )
             {
-                QThread::msleep(1);
-                val+=k;
-                bar->setValue(val);
+                val->a += k;
+                bar->setValue(val->a);
             }
         }
         else
         {
-            QThread::msleep(1);
-            val+=k;
-            bar->setValue(val);
+            val->a += k;
+            bar->setValue(val->a);
         }
-
     }
     return encp_data;
 }
@@ -245,11 +234,11 @@ void Encrypt::on_pushButton_2_clicked()
     for (unsigned i = 0; i <= 128; i++)
         char_hash[i] = nothing[0];
 
-    if ((ui->path_line->text() == "" || ui->pass_line->text() == "") && ui->comboBox->currentIndex() == 0)
+    if ((ui->path_line->text() == "" || ui->pass_line->text() == "") && ui->comboBox->currentIndex() != 1)
     {
         ui->error->setText("Введены не все данные");
     }
-    else if (ui->path_line->text() == "" && ui->comboBox->currentIndex() == 2)
+    else if (ui->path_line->text() == "" && ui->comboBox->currentIndex() == 1)
     {
         ui->error->setText("Введены не все данные");
     }
@@ -268,12 +257,11 @@ void Encrypt::on_pushButton_2_clicked()
             // создание Progress Bar
             QProgressBar *bar = new QProgressBar(this);
             bar->setValue(0);
-            ui->gridLayout->addWidget(bar,10,0,1,0);
+            ui->gridLayout->addWidget(bar,11,0,1,0);
             bar->show();
 
             if (file.size() == 0)
             {
-                qDebug() << "1";
                 QFile encp_file(path+".encp");
                 encp_file.open(QIODevice::WriteOnly);
                 encp_file.close();
@@ -289,17 +277,17 @@ void Encrypt::on_pushButton_2_clicked()
 
                 // выбор метода шифрования
                 // 0 - XOR, 1 - Фейстель
-                mData *encp_data;
+                QByteArray encp_data;
 
                 if (ui->comboBox->currentIndex() == 0)
                     encp_data = encryptionXOR(data,pass,bar);
                 else if (ui->comboBox->currentIndex() == 1)
                     encp_data = encryptionFestl(data,bar);
 
-                QByteArray encp_arr;
+                //// QByteArray encp_arr;
 
-                for (uint i = 0; i < getLength(encp_data); i++)
-                    encp_arr += getItem(encp_data, i)->a;
+                //// for (uint i = 0; i < getLength(encp_data); i++)
+                ////     encp_arr += getItem(encp_data, i)->a;
 
                 QFile encp_file(path+".encp");
                 if (!encp_file.open(QIODevice::WriteOnly))
@@ -308,13 +296,18 @@ void Encrypt::on_pushButton_2_clicked()
                 {
                     // запись хэша
                     if (ui->comboBox->currentIndex() == 0)
-                        encp_file.write(pass);
-
+                    {
+                        if (ui->comboBox->currentIndex() == 0)
+                            encp_file.write(pass);
+                    }
                     // запись основных данных
-                    encp_file.write(encp_arr);
+                    encp_file.write(encp_data);
+
                     ui->error->setText("Файл сохранен в ту же папку");
+                    //проверка
+
                 }
-                DeleteList(encp_data);
+                //DeleteList(pb_value);
                 encp_file.close();
             }
             delete bar;

@@ -65,8 +65,6 @@ QByteArray decryptionFestl(QByteArray encp_data, QProgressBar *bar)
     }
     else
         div = encp_data.size()/100;
-
-    QByteArray dcp_data;
     int n = 3;
     QByteArray R;
     QByteArray L;
@@ -93,26 +91,19 @@ QByteArray decryptionFestl(QByteArray encp_data, QProgressBar *bar)
         {
             if (i % div == 0 )
             {
-                QThread::msleep(1);
                 val+=(2*k);
                 bar->setValue(val);
             }
         }
         else
         {
-            QThread::msleep(1);
             val+=2*k;
             bar->setValue(val);
         }
     }
-
-    for (int i = 0; i < encp_data.size(); i++)
-    {
-        if (i < encp_data.size()/2)
-            dcp_data += L[i];
-        else
-            dcp_data += R[i%(encp_data.size()/2)];
-    }
+    bar->setValue(0);
+    QByteArray dcp_data = L + R;
+    bar->setValue(100);
     dcp_data = unpadding(dcp_data);
     return dcp_data;
 }
@@ -148,14 +139,12 @@ QByteArray decryptionXOR(QByteArray encp_data, QByteArray encp_hash, QProgressBa
         {
             if (i % div == 0 )
             {
-                QThread::msleep(1);
                 val+=k;
                 bar->setValue(val);
             }
         }
         else
         {
-            QThread::msleep(1);
             val+=k;
             bar->setValue(val);
         }
