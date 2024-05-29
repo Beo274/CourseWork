@@ -75,8 +75,13 @@ QByteArray decryptionFestl(QByteArray encp_data, QProgressBar *bar)
             L+=encp_data[i];
         else
             R+=encp_data[i];
+        if (i % div == 0 )
+        {
+            val+=(2*k);
+            bar->setValue(val);
+        }
     }
-
+    val = 0;
     for (int i = 0; i < encp_data.size()/2; i++)
     {
         for (int j = n; j > 1; j--)
@@ -222,8 +227,20 @@ void Decrypt::on_pushButton_2_clicked()
                 {
                     // запись хэша и данных из файла
                     QByteArray encp_hash = encp_file.read(h_len);
-                    QByteArray encp_data = encp_file.read(d_len);
-
+                    QByteArray encp_data;
+                    long long s = encp_file.size();
+                    mData *val = CreateList(1);
+                    val->a = 0;
+                    for (int i = encp_file.size(); i > 0; i+=65536)
+                    {
+                        if (s >= 65536)
+                            encp_data.append(encp_file.read(65536));
+                        else
+                            encp_data.append(encp_file.readAll());
+                        s-=65536;
+                        bar->setValue((val->a)++);
+                    }
+                    DeleteList(val);
                     QByteArray pass = dcpHashing(ui->pass->text());
                     bool isEqual = 1;
                     for (uint i = 0; i < h_len; i++)
@@ -243,10 +260,23 @@ void Decrypt::on_pushButton_2_clicked()
                         // дешифровка
                         dcp_data = decryptionXOR(encp_data,encp_hash, bar);
                     }
+
                 }
                 else if (ui->comboBox->currentIndex() == 1)
                 {
-                    QByteArray encp_data = encp_file.readAll();
+                    QByteArray encp_data;
+                    long long s = encp_file.size();
+                    mData *val = CreateList(1);
+                    val->a = 0;
+                    for (int i = encp_file.size(); i > 0; i+=65536)
+                    {
+                        if (s >= 65536)
+                            encp_data.append(encp_file.read(65536));
+                        else
+                            encp_data.append(encp_file.readAll());
+                        s-=65536;
+                        bar->setValue((val->a)++);
+                    }
                     dcp_data = decryptionFestl(encp_data,bar);
                 }
 
@@ -266,6 +296,7 @@ void Decrypt::on_pushButton_2_clicked()
             delete bar;
         }
         encp_file.close();
+
     }
 }
 

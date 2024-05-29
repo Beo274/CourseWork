@@ -14,7 +14,7 @@ QT_END_NAMESPACE
 
 struct mData
 {
-    char a;
+    int a;
     mData *adr;
 };
 
